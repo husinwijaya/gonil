@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-	// 1. Handle arguments to command
 	if len(os.Args) != 2 {
 		fmt.Errorf("missing argument: <go source that contains type struct>")
 	}
@@ -39,7 +38,7 @@ func main() {
 						return importPath
 					}
 				}
-				return ""
+				return alias
 			}
 		case *ast.TypeSpec:
 			t, ok := node.(*ast.TypeSpec)
@@ -81,6 +80,20 @@ func main() {
 						switch x.(type) {
 						case *ast.Ident:
 							genField = genField.Qual(getImportPath(x.(*ast.Ident).Name), fieldSel.Sel.Name)
+						}
+					case *ast.StarExpr:
+						x := fieldType.(*ast.StarExpr).X
+						switch x.(type) {
+						case *ast.Ident:
+							xIdent := x.(*ast.Ident)
+							genField = genField.Op("*").Id(xIdent.Name)
+						case *ast.SelectorExpr:
+							fieldSel := x.(*ast.SelectorExpr)
+							x := fieldSel.X
+							switch x.(type) {
+							case *ast.Ident:
+								genField = genField.Op("*").Qual(getImportPath(x.(*ast.Ident).Name), fieldSel.Sel.Name)
+							}
 						}
 					}
 					nillableFields = append(nillableFields, genField)
